@@ -1,0 +1,63 @@
+version: "3"
+services:
+  
+  app:
+    build: .
+    container_name: app
+    entrypoint: dockerize -template ./.docker/app/.env:.env -wait tcp://mariadb-dev:3306 -timeout 30s ./.docker/entrypoint.sh
+    environment:
+      - DB_HOST=mariadb-dev
+      - DB_DATABASE=laravel
+      - DB_USERNAME=root
+      - DB_PASSWORD=root
+    volumes:
+      - .:/var/www
+      - /var/www/vendor
+    depends_on:
+      - mariadb-dev
+      - redis
+    networks:
+      - app-network
+
+  nginx:
+    build: .docker/nginx
+    container_name: nginx
+    restart: always
+    tty: true
+    ports:
+      - "8080:80"
+    volumes:
+      - .:/var/www
+    depends_on:
+      - app
+    networks:
+      - app-network
+
+  mariadb-dev:
+    image: mariadb:10.4
+    container_name: mariadb-dev
+    restart: unless-stopped
+    tty: true
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./.docker/dbdata:/var/lib/mysql
+    environment:
+      - MYSQL_DATABASE=laravel
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_USER=root
+    networks:
+      - app-network
+
+  redis:
+    image: redis:alpine
+    container_name: redis
+    expose:
+      - 6379
+    networks:
+      - app-network
+
+#Docker Networks
+networks:
+  app-network:
+    driver: bridge

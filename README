@@ -1,0 +1,18 @@
+# laravel
+Ambiente de desenvolvimento Laravel
+
+Endereço da imagem no Docker Hub:
+
+jefferson333/laravel_app
+
+
+Instruções:
+
+git clone https://github.com/jefferson333/laravel.git laravel_dev
+
+cd laravel_dev
+
+sudo docker-compose up -d
+
+Acesso:
+http://localhost:8080/
