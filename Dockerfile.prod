@@ -1,0 +1,52 @@
+FROM php:7.3-fpm-alpine as builder
+
+# Install Additional dependencies
+RUN apk update && apk add --no-cache \
+     build-base shadow vim bash mysql-client openssl nodejs npm
+
+# Add and Enable PHP-PDO Extenstions
+RUN docker-php-ext-install pdo_mysql bcmath
+
+# Install PHP Composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+# Install dockerize
+ENV DOCKERIZE_VERSION v0.6.1
+RUN wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
+    && tar -C /usr/local/bin -xzvf dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
+    && rm dockerize-alpine-linux-amd64-$DOCKERIZE_VERSION.tar.gz
+
+WORKDIR /var/www
+
+RUN rm -rf /var/www/html
+
+RUN ln -s public html
+
+COPY . /var/www
+
+RUN composer install \
+    && php artisan key:generate \
+    && php artisan cache:clear \
+    && chmod -R 755 storage
+
+RUN npm install
+
+
+FROM php:7.3-fpm-alpine
+
+# Install Additional dependencies
+RUN apk update && apk add --no-cache mysql-client
+
+# Add and Enable PHP-PDO Extenstions
+RUN docker-php-ext-install pdo_mysql bcmath
+
+WORKDIR /var/www
+
+RUN rm -rf /var/www/html
+
+COPY --from=builder /var/www .
+
+# Expose port 9000 and start php-fpm server
+EXPOSE 9000
+#CMD ["php-fpm"]
+ENTRYPOINT [ "php-fpm" ]
